@@ -4,7 +4,7 @@ buildscript {
     }
     dependencies {
         // https://github.com/Transmode/gradle-docker
-        classpath "se.transmode.gradle:gradle-docker:1.2"
+        classpath "com.cabonline.gradle:gradle-docker:1.3.0"
     }
 }
 
@@ -36,6 +36,17 @@ configurations.all {
 //    exclude group: "ch.qos.logback", module: "logback-classic"
 //    exclude group: "org.slf4j", module: "slf4j-log4j12"
 }
+
+
+ext.buildNumber = {
+    def buildNumber = System.getenv('BUILD_NUMBER')
+    if (buildNumber == null || buildNumber.allWhitespace) {
+        return project.version.toString()
+    } else {
+        return project.version.toString().split('-')[0] + '-' + buildNumber
+    }
+}
+
 
 dependencies {
     errorprone "com.google.errorprone:error_prone_core:${errorProneVersion}"
@@ -75,3 +86,11 @@ task wrapper(type: Wrapper) {
     gradleVersion = '4.1'
     distributionUrl = "https://services.gradle.org/distributions/gradle-$gradleVersion-all.zip"
 }
+
+task printVersion {
+    doLast {
+        println buildNumber()
+    }
+}
+
+apply from: 'build-docker.gradle'

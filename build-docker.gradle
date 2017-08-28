@@ -1,0 +1,19 @@
+apply plugin: 'docker'
+
+task buildDocker(type: Docker, dependsOn: build) {
+    baseImage = "frolvlad/alpine-oraclejdk8:slim"
+    project.group = "cabonline"
+    applicationName = "traffic-control-public-api"
+    tagVersions = [ project.version, 'latest' ]
+    maintainer = 'Nataliia "nataliia.kushch@cabonline.com"'
+    dockerfile.volume("/tmp")
+    dockerfile.add {
+        from jar
+        rename { 'traffic-control-public-api.jar' }
+    }
+    dockerfile.entryPoint(["sh", "-c", "exec java \$JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar /traffic-control-public-api.jar"])
+    dockerfile.expose(8080)
+    dockerfile.expose(8081)
+
+    push = project.hasProperty('push')
+}

@@ -1,0 +1,40 @@
+os: linux
+language: java
+jdk: oraclejdk8
+
+env:
+- BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
+
+before_cache:
+- rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+- rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+cache:
+  directories:
+  - "$HOME/.gradle/caches/"
+  - "$HOME/.gradle/wrapper/"
+
+jobs:
+  include:
+    - stage: Build
+      install: skip
+      script:
+        - gradle -q printVersion
+        - gradle clean build
+    - stage: Docker image
+      sudo: required
+      services:
+        - docker
+      install: skip
+      script:
+        - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+        - ./gradlew buildDocker -x test $([ "$TRAVIS_BRANCH" == "develop" ] && echo -Ppush)
+    - stage: Deploy to CI
+      cache: false
+      install: skip
+      script: skip
+      deploy:
+        provider: script
+        skip_cleanup: true
+        script: scripts/run-pipeline.sh
+        on:
+          branch: develop
