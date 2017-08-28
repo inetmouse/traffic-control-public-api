@@ -1,0 +1,64 @@
+job "traffic-control-public-api" {
+  region      = "aws"
+  datacenters = ["eu-west-1"]
+  type = "service"
+
+  update {
+    stagger      = "60s"
+    max_parallel = 1
+  }
+
+  constraint {
+    attribute = "${node.class}"
+    value     = "Worker_Node"
+  }
+
+  group "traffic-control" {
+    count = INSTANCE_COUNT
+
+    task "deploy" {
+      driver = "docker"
+      config {
+        image = "cabonline/IMAGE_NAME"
+        force_pull = true
+        auth {
+          username = "DOCKER_USERNAME"
+          password = "DOCKER_PASSWORD"
+        }
+
+        port_map {
+          http = 8080
+          management = 8081
+        }
+      }
+
+      env {
+        "JAVA_OPTS" = <<EOF
+          -ea
+          -Dspring.cloud.consul.host=${NOMAD_IP_http}
+          -Dspring.cloud.consul.discovery.prefer-ip-address=true
+          -Dspring.cloud.consul.discovery.ip-address=${NOMAD_IP_http}
+          -Dspring.cloud.consul.discovery.port=${NOMAD_HOST_PORT_http}
+          -Dspring.cloud.consul.discovery.managementPort=${NOMAD_HOST_PORT_management}
+          -Dspring.application.instance_id=${NOMAD_ALLOC_ID}
+          -Xss1M -Xmx512M
+EOF
+      }
+
+      # Specify the maximum resources required to run the job,
+      # include CPU, memory, and bandwidth.
+      resources {
+        cpu    = 512 # MHz
+        memory = 512 # MB
+
+        network {
+          mbits = 10
+          port "http" {
+          }
+          port "management" {
+          }
+        }
+      }
+    }
+  }
+}
